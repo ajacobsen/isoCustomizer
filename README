@@ -1,0 +1,97 @@
+
+isoCustomizer ist ein Programm zum Remastern von Ubuntu (zukünftg auch Debian) basierten Live CDs/DVDs.
+Die Idee ist, auf basis eines Konfigurationsverzeichnisses, das Remestern solcher Live-CD/-DVDs zu automatisieren.
+
+Installation:
+isoCustomizer benötigt genisoimage, squashfs-tools, und  python-2.7.x
+
+# apt-get install genisoimage squashfs-tools
+
+Danach wird das heruntergeladene Archiv entpackt werden, ich gehe in u.s. Beispiel davon aus,
+dass der Download im Benutzerverzeichnis unter Downloads gespeichert wurde.
+
+# tar -C /opt xf ~/Download/isoCustomizer-0.1.0.tar.gz
+# ln -s /opt/isoCustomizer/isoCustomizer.py /usr/bin/isoCusomizer
+
+
+Anwendung:
+Man sorgt für ausreichend Platz (Mint13 MATE beansprucht entpackt ~3GB) und erstellt ein neues Verzeichnis.
+Wichtig ist außerdem, dass sich dieses Verzeichnis auf einem Dateisystem liegt, dass die Linux-Dateirechte unterstürzt.
+D.h. NTFS und FAT kommen nicht in Frage.
+Da ich bisher alle Tests mit Linux Mint 13 MATE x86 durchgeführt habe, nenne ich mein Verzeichnis "lm13mate_x86".
+
+$ mkdir lm13mate_x86 && cd lm13mate_x86
+
+Danach erstellt man ein neues Konfigurationsverzeichnis
+
+$ isoCustomizer config
+
+Und entpackt die original ISO-Datei, die ihr bearbeiten wollt
+
+# isoCustomizer extract ~/Downloads/linux-distribution.iso[/code]
+
+Je nach Leistung d. Rechners, eine gefühlte Ewigkeit später:
+Wenn wir jetzt ls aufrufen, sehen wir 2 neue Verzeichnisse,
+"config" wurde durch das Kommando - Wer hätte es gedacht? - "config" erstellt.
+".build" durch "extract", hier wurde die ISO entpackt. getrennt in ISO-Dateisystem (new_iso) und System Image (new_squashfs).
+Im Verzeichnis "config" werden die gewünschten Änderungen vorgenommen, diese werden im nächsten Schritt auf die ISO angewandt
+
+$ ls -1a config/
+config/:
+    -> binary_includes/
+        Inhalt wird rekursiv auf die CD übertragen (rsync -at).
+    -> chroot_includes/
+        Inhalt wird rekursiv in das System Image übertragen (rsync -at).
+    -> config
+        Konfigurationsdatei (siehe Kommando "config").
+    -> local_packages/
+        deb-Packete, die mit gdebi installiert werden können. 
+    -> packagelists/
+        Textdateien mit Paketnamen (Dateinamen muss auf .list enden):
+            # Ein jede Zeile wird apt-get 1:1 übergeben
+            foo # Installiert den aktuellen Installationskandidaten.
+            baz-X.Z # Installiert die Version X.Z von baz.
+            bar- # Entfernt das Paket (Ein Unterstrich (_) entfernt das Packet vollständig (--purge)).
+
+Die Verwundug von config:
+
+$ isoCustomizer config [OPTIONEN]
+    -p, --packages=:
+        Kommagetrennte Liste von Packetnamen.
+
+        Wird als Leerzeichengetrennte Liste an apt-get install übergeben:
+        apt-get --yes install foo bar- baz-X.Z
+
+        foo # Installiert den aktuellen Installationskandidaten.
+        baz-X.Z # Installiert die Version X.Z von baz.
+        bar- # Entfernt das Paket (Ein Unterstrich (_) entfernt das Packet vollständig (--purge)).
+
+    -V --volid=:
+        Volume ID der erstellten Live-CD/-DVD (Datenträgerbezeichnung/Label).
+        Begrenzt auf 32 Zeichen, inklusive Leerzeichen.
+        Wird unter Ubunu als Einhängepunkt verwendet. (/media/<VOLUME ID)
+
+    -h --help:
+        Zeigt alle Optionen mit Kurzbeschreibung.
+
+    Beispiel:
+    isoCustomizer config -p foo,bar-,baz-X.Z -V "Meine erste Live-CD"
+
+Die Optionen werden in der Datei config/config gespeichert. Nach obigem Beispiel würde der Inhalt also so aussehen:
+
+packages = "foo,bar-,baz-X.Z"
+volid = "Meine erste Live-CD"
+
+Hat man alle gewünschten Änderungen vorgenommen, kann mit dem Kommando "build" eine neue ISO erstellt werden.
+Als Argument übergeben wir den Dateinamen der zu erstellenden Datei
+
+# isoCustomizer build ~/lm13mate_x86/lm13-remaster.iso
+
+Wenn der Vorgang erfolgreich abschlossen wurde, finden wir jetzt die neu erstell ISO unter dem angegeben Pfad und
+können diese, bspw in einer VM, testen.
+
+Man sollte nach jedem build, spätestens vor dem nächsten, das Kommando "clean" benutzen,
+ohne weite Optionen/Argumente, wird nur das Verzeichnis ".build" gelöscht, "config" bleibt für weitere builds, bspw
+mit der nächsten Version der gleichen Distribution, erhalten.
+
+# isoCustomizer clean
