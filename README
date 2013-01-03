@@ -2,6 +2,9 @@
 isoCustomizer ist ein Programm zum Remastern von Ubuntu (zukünftg auch Debian) basierten Live CDs/DVDs.
 Die Idee ist, auf basis eines Konfigurationsverzeichnisses, das Remestern solcher Live-CD/-DVDs zu automatisieren.
 
+Download:
+http://www.yabal.de/source/isoCustomizer/isoCustomizer-0.1.0.tar.gz
+
 Installation:
 isoCustomizer benötigt genisoimage, squashfs-tools, und  python-2.7.x
 
