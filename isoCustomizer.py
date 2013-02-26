@@ -34,7 +34,7 @@ def build(args):
         build(args.work_path, args.FILENAME, config)
         print '\n***** Done! *****\n'
     except Exception, detail:
-        print detail
+        print_error(detail)
     finally:
         for root,dirs,files in os.walk(os.path.join(args.work_path, '.build')):
             if os.path.ismount(root):
@@ -49,6 +49,11 @@ def clean(args):
         clean_up(args.work_path, args.config, args.build)
     except Exception, detail:
         print detail
+
+def print_error(error_message):
+    print 50 * '='
+    print error_message
+    print 50 * '='
 
 parser = argparse.ArgumentParser(prog='isoCustomizer')
 subparsers = parser.add_subparsers()
