@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import logging
 
 # sub-command functions
 def config(args):
@@ -27,8 +28,12 @@ def build(args):
     '''Erstellen des SquashFS und der ISO'''
     if os.getuid() != 0:
         os.sys.exit('You must be root')
+
     from isoCustomizer.build import build
     from isoCustomizer.config import read_config
+
+    logger.info('Check!')
+    
     try:
         config = read_config(os.path.join(args.work_path, 'config'))
         build(args.work_path, args.FILENAME, config)
@@ -48,14 +53,16 @@ def clean(args):
     try:
         clean_up(args.work_path, args.config, args.build)
     except Exception, detail:
-        print detail
+        logger.error(detail)
 
 def print_error(error_message):
-    print 50 * '='
+    print 50 * '#'
     print error_message
-    print 50 * '='
+    print 50 * '#'
 
 parser = argparse.ArgumentParser(prog='isoCustomizer')
+parser.add_argument('--log', type=str, default='DEBUG', help='TODO')
+parser.add_argument('--verbose', action='store_true', help='TODO')
 subparsers = parser.add_subparsers()
 
 parser_config = subparsers.add_parser('config', help='Erstellt ein neues Konfigurationsverzeichnis')
@@ -83,4 +90,23 @@ parser_clean.add_argument('--build', action='store_false',
 parser_clean.set_defaults(func=clean, work_path=os.getcwd())
 
 args = parser.parse_args()
+
+loglevel = getattr(logging, args.log.upper(), None)
+if not isinstance(loglevel, int):
+    raise ValueError('Invalid log level: {}'.format(loglevel))
+logger = logging.getLogger('isoCustomizer')
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('build.log')
+fh.setLevel(loglevel)
+ch = logging.StreamHandler()
+if args.verbose:
+    ch.setLevel(logging.DEBUG)
+else:
+    ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(message)s')
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+logger.addHandler(ch)
+logger.addHandler(fh)
+
 args.func(args)

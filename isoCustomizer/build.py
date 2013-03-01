@@ -2,9 +2,17 @@
 
 import os
 
+import logging
+
 from error import SystemError
 
+
 def build(work_path, filename, config):
+    module_logger = logging.getLogger('isoCustomizer.build')
+    module_logger.info('Started building {}'.format(filename))
+    module_logger.warning('Warning, exception ahead!')
+    raise SystemError('exit')
+
     squash_fs = os.path.join(work_path, '.build/new_squashfs')
     iso_dir = os.path.join(work_path, '.build/new_iso')
 
