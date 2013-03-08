@@ -3,7 +3,9 @@
 
 import argparse
 import os
-import logging
+import logging, logging.handlers
+
+from isoCustomizer.error import SystemError
 
 # sub-command functions
 def config(args):
@@ -32,14 +34,33 @@ def build(args):
     from isoCustomizer.build import build
     from isoCustomizer.config import read_config
 
-    logger.info('Check!')
+    ## Make sure log file doesn't exist
+    if os.path.exists(os.path.join(args.work_path, 'build.log')):
+        print True
+        os.remove(os.path.join(args.work_path, 'build.log'))
+    ## We have to use filemode 'a' to make sure the log is written cronological
+    fh = logging.handlers.WatchedFileHandler(filename='build.log', mode='a' )
+    loglevel = getattr(logging, args.log.upper(), None)
+    if not isinstance(loglevel, int):
+        raise ValueError('Invalid log level: {}'.format(loglevel))
+    fh.setLevel(loglevel)
+    ch = logging.StreamHandler()
+    if args.verbose:
+        ch.setLevel(logging.DEBUG)
+    else:
+        ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
     
     try:
         config = read_config(os.path.join(args.work_path, 'config'))
         build(args.work_path, args.FILENAME, config)
         print '\n***** Done! *****\n'
-    except Exception, detail:
-        print_error(detail)
+    except SystemError, detail:
+        logger.error(50 * '#' + '\n' + str(detail) + '\n' + 50 * '#')
     finally:
         for root,dirs,files in os.walk(os.path.join(args.work_path, '.build')):
             if os.path.ismount(root):
@@ -53,12 +74,13 @@ def clean(args):
     try:
         clean_up(args.work_path, args.config, args.build)
     except Exception, detail:
-        logger.error(detail)
+        print_error(detail)
 
 def print_error(error_message):
     print 50 * '#'
     print error_message
     print 50 * '#'
+
 
 parser = argparse.ArgumentParser(prog='isoCustomizer')
 parser.add_argument('--log', type=str, default='DEBUG', help='TODO')
@@ -91,22 +113,7 @@ parser_clean.set_defaults(func=clean, work_path=os.getcwd())
 
 args = parser.parse_args()
 
-loglevel = getattr(logging, args.log.upper(), None)
-if not isinstance(loglevel, int):
-    raise ValueError('Invalid log level: {}'.format(loglevel))
 logger = logging.getLogger('isoCustomizer')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('build.log')
-fh.setLevel(loglevel)
-ch = logging.StreamHandler()
-if args.verbose:
-    ch.setLevel(logging.DEBUG)
-else:
-    ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(message)s')
-ch.setFormatter(formatter)
-fh.setFormatter(formatter)
-logger.addHandler(ch)
-logger.addHandler(fh)
 
 args.func(args)
